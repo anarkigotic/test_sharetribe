@@ -3,12 +3,15 @@ services:
     name: sharetribe-marketplace
     env: node
     plan: free
-    buildCommand: yarn install && yarn build
+    buildCommand: yarn --frozen-lockfile install && yarn build
     startCommand: yarn start
     autoDeploy: true
     branch: main
     # Force sync with Render
     healthCheckPath: /_health
+    # Increase startup timeout
+    numInstances: 1
+    region: oregon
     envVars:
       - key: NODE_ENV
         value: production
