@@ -114,27 +114,22 @@ jobs:
           echo "🌐 Ready to deploy to: ${{ vars.MARKETPLACE_ROOT_URL }}"
           echo "📋 Go to Render Dashboard and click 'Manual Deploy' to complete"
 
-      - name: 📝 Create Success Comment
+      - name: 📝 Build Summary
         if: success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.repos.createCommitComment({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              commit_sha: context.sha,
-              body: `🚀 **Build Complete!** 
-              
-              ✅ Your code is ready for deployment
-              🌐 Target: ${{ vars.MARKETPLACE_ROOT_URL }}
-              
-              **Next Step:** 
-              1. Go to [Render Dashboard](https://dashboard.render.com/)
-              2. Find your service: \`test_sharetribe\`
-              3. Click "Manual Deploy"
-              
-              🎉 Your custom API will be live at: ${{ vars.MARKETPLACE_ROOT_URL }}/mi-api`
-            })
+        run: |
+          echo "📋 BUILD SUMMARY"
+          echo "==============="
+          echo "✅ Build completed successfully!"
+          echo "🌐 Ready to deploy to: ${{ vars.MARKETPLACE_ROOT_URL }}"
+          echo "📦 Custom page built: MyCustomPage"
+          echo "🎯 Custom API ready: /mi-api"
+          echo ""
+          echo "🚀 NEXT STEPS:"
+          echo "1. Go to Render Dashboard: https://dashboard.render.com/"
+          echo "2. Find your service: test_sharetribe"
+          echo "3. Click 'Manual Deploy'"
+          echo "4. Wait 2-3 minutes for deployment"
+          echo "5. Visit: ${{ vars.MARKETPLACE_ROOT_URL }}/mi-api"
 
       - name: 🔔 Notify on Failure
         if: failure()
