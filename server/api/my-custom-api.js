@@ -11,6 +11,19 @@ let customData = [
   { id: 2, name: 'Producto 2', price: 200, category: 'clothing' },
   { id: 3, name: 'Producto 3', price: 150, category: 'books' }
 ];
+let nextId = customData.length + 1;
+
+// Middleware de validación
+const validateCustomData = (req, res, next) => {
+  const { name, price, category } = req.body;
+  if (!name || !price || !category) {
+    return res.status(400).json({ success: false, error: 'Faltan campos requeridos: name, price, category' });
+  }
+  if (typeof name !== 'string' || typeof category !== 'string' || typeof price !== 'number') {
+    return res.status(400).json({ success: false, error: 'Tipos de datos inválidos para name, price o category' });
+  }
+  next();
+};
 
 // GET - Obtener todos los elementos
 const getCustomData = (req, res) => {
@@ -192,5 +205,6 @@ module.exports = {
   createCustomData,
   updateCustomData,
   deleteCustomData,
-  getExternalData
+  getExternalData,
+  validateCustomData
 };

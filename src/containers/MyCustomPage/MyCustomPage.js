@@ -19,37 +19,56 @@ const MyCustomPage = () => {
     category: ''
   });
 
-  // Función para obtener datos de mi API personalizada
+    // Función para obtener datos de mi API personalizada
   const fetchCustomData = async (filters = {}) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       // Construir query parameters
       const queryParams = new URLSearchParams(filters).toString();
-      const url = `/api/my-custom-data${queryParams ? `?${queryParams}` : ''}`;
-      
+      // En desarrollo, usar el puerto del servidor API directamente
+      // En producción, usar la URL base actual
+      const apiPort = process.env.REACT_APP_DEV_API_SERVER_PORT || '3500';
+      const baseUrl = process.env.NODE_ENV === 'development' 
+        ? `http://localhost:${apiPort}` 
+        : '';
+      const url = `${baseUrl}/api/my-custom-data${queryParams ? `?${queryParams}` : ''}`;
+
       const response = await fetch(url);
-      const result = await response.json();
       
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+
       if (result.success) {
         setCustomData(result.data);
       } else {
         setError(result.error);
       }
     } catch (err) {
-      setError('Error conectando con la API');
+      console.error('Error en fetchCustomData:', err);
+      setError('Error conectando con la API: ' + err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // Función para obtener datos externos
+    // Función para obtener datos externos
   const fetchExternalData = async () => {
     try {
-      const response = await fetch('/api/external-data');
-      const result = await response.json();
+      // En desarrollo, usar el puerto del servidor API directamente
+      const apiPort = process.env.REACT_APP_DEV_API_SERVER_PORT || '3500';
+      const baseUrl = process.env.NODE_ENV === 'development' 
+        ? `http://localhost:${apiPort}` 
+        : '';
+      const url = `${baseUrl}/api/external-data`;
       
+      const response = await fetch(url);
+      const result = await response.json();
+
       if (result.success) {
         setExternalData(result.data);
       }
@@ -58,21 +77,32 @@ const MyCustomPage = () => {
     }
   };
 
-  // Función para crear nuevo elemento
+    // Función para crear nuevo elemento
   const createNewItem = async (e) => {
     e.preventDefault();
-    
+
     try {
-      const response = await fetch('/api/my-custom-data', {
+      // En desarrollo, usar el puerto del servidor API directamente
+      const apiPort = process.env.REACT_APP_DEV_API_SERVER_PORT || '3500';
+      const baseUrl = process.env.NODE_ENV === 'development' 
+        ? `http://localhost:${apiPort}` 
+        : '';
+      const url = `${baseUrl}/api/my-custom-data`;
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          name: formData.name,
+          price: parseFloat(formData.price),
+          category: formData.category
+        }),
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         // Limpiar formulario
         setFormData({ name: '', price: '', category: '' });
@@ -83,21 +113,29 @@ const MyCustomPage = () => {
         alert('Error: ' + result.error);
       }
     } catch (err) {
-      alert('Error creando elemento');
+      console.error('Error creando elemento:', err);
+      alert('Error creando elemento: ' + err.message);
     }
   };
 
-  // Función para eliminar elemento
+    // Función para eliminar elemento
   const deleteItem = async (id) => {
     if (!confirm('¿Estás seguro de eliminar este elemento?')) return;
-    
+
     try {
-      const response = await fetch(`/api/my-custom-data/${id}`, {
+      // En desarrollo, usar el puerto del servidor API directamente
+      const apiPort = process.env.REACT_APP_DEV_API_SERVER_PORT || '3500';
+      const baseUrl = process.env.NODE_ENV === 'development' 
+        ? `http://localhost:${apiPort}` 
+        : '';
+      const url = `${baseUrl}/api/my-custom-data/${id}`;
+      
+      const response = await fetch(url, {
         method: 'DELETE',
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
         fetchCustomData();
         alert('Elemento eliminado exitosamente');
@@ -105,7 +143,8 @@ const MyCustomPage = () => {
         alert('Error eliminando elemento');
       }
     } catch (err) {
-      alert('Error eliminando elemento');
+      console.error('Error eliminando elemento:', err);
+      alert('Error eliminando elemento: ' + err.message);
     }
   };
 

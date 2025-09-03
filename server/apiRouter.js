@@ -27,7 +27,8 @@ const {
   createCustomData, 
   updateCustomData, 
   deleteCustomData, 
-  getExternalData 
+  getExternalData,
+  validateCustomData 
 } = require('./api/my-custom-api');
 
 const router = express.Router();
@@ -96,8 +97,8 @@ router.get('/auth/google/callback', authenticateGoogleCallback);
 
 // CRUD endpoints para mis datos personalizados
 router.get('/my-custom-data', getCustomData);          // GET /api/my-custom-data
-router.post('/my-custom-data', createCustomData);      // POST /api/my-custom-data
-router.put('/my-custom-data/:id', updateCustomData);   // PUT /api/my-custom-data/1
+router.post('/my-custom-data', validateCustomData, createCustomData);      // POST /api/my-custom-data
+router.put('/my-custom-data/:id', validateCustomData, updateCustomData);   // PUT /api/my-custom-data/1
 router.delete('/my-custom-data/:id', deleteCustomData); // DELETE /api/my-custom-data/1
 
 // Endpoint para datos externos
