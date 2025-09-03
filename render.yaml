@@ -7,6 +7,8 @@ services:
     startCommand: yarn start
     autoDeploy: true
     branch: main
+    # Force sync with Render
+    healthCheckPath: /_health
     envVars:
       - key: NODE_ENV
         value: production
