@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: sharetribe-marketplace
+    env: node
+    plan: free
+    buildCommand: yarn install && yarn build
+    startCommand: yarn start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REACT_APP_SHARETRIBE_SDK_CLIENT_ID
+        value: a4e5e33b-0a38-4a11-a69a-82d7a8d54004
+      - key: SHARETRIBE_SDK_CLIENT_SECRET
+        value: 254a45a39c5bc5832a256484a4cb8c053240bc50
+      - key: REACT_APP_STRIPE_PUBLISHABLE_KEY
+        value: pk_test_51RVascQxrMJPsNuFEQi8u5tOvMOJ1pYpAJZUwFEvrEmnKrMLQAJHvpNUgIXpNmhZSo
+      - key: REACT_APP_MARKETPLACE_ROOT_URL
+        generateValue: true
+      - key: REACT_APP_ENV
+        value: production
+      - key: REACT_APP_CSP
+        value: block
+      - key: REACT_APP_SHARETRIBE_USING_SSL
+        value: true
+      - key: SERVER_SHARETRIBE_TRUST_PROXY
+        value: true
