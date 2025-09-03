@@ -1,0 +1,28 @@
+# Configuración para Staging
+services:
+  - type: web
+    name: sharetribe-staging
+    env: node
+    plan: free # Usar plan gratuito para staging
+    buildCommand: yarn install --frozen-lockfile && yarn build
+    startCommand: yarn start
+    healthCheckPath: /_health
+    
+    # Auto-deploy desde staging branch
+    autoDeploy: true
+    branch: staging
+    
+    # Variables de entorno de staging
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REACT_APP_ENV
+        value: staging
+      - key: REACT_APP_CSP
+        value: report
+      - key: REACT_APP_SHARETRIBE_USING_SSL
+        value: "true"
+      - key: SERVER_SHARETRIBE_TRUST_PROXY
+        value: "true"
+      - key: REACT_APP_MARKETPLACE_NAME
+        value: Mi Marketplace - Staging

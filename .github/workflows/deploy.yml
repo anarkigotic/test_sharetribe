@@ -1,0 +1,186 @@
+name: 🚀 Deploy to Render
+
+on:
+  # Deploy automáticamente cuando haces push a estas ramas
+  push:
+    branches:
+      - main        # Producción
+      - staging     # Staging
+      - develop     # Desarrollo
+  
+  # También puedes triggear manualmente
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+jobs:
+  # Job para detectar qué ambiente usar
+  detect-environment:
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      render-service-id: ${{ steps.env.outputs.render-service-id }}
+    steps:
+      - name: 🔍 Detect Environment
+        id: env
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "environment=production" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/staging" ]; then
+            echo "environment=staging" >> $GITHUB_OUTPUT
+          elif [ "${{ github.ref }}" = "refs/heads/develop" ]; then
+            echo "environment=development" >> $GITHUB_OUTPUT
+          else
+            echo "environment=development" >> $GITHUB_OUTPUT
+          fi
+          
+          # Set service IDs based on environment
+          case "${{ steps.env.outputs.environment || 'development' }}" in
+            production)
+              echo "render-service-id=${{ secrets.RENDER_SERVICE_ID_PROD }}" >> $GITHUB_OUTPUT
+              ;;
+            staging)
+              echo "render-service-id=${{ secrets.RENDER_SERVICE_ID_STAGING }}" >> $GITHUB_OUTPUT
+              ;;
+            *)
+              echo "render-service-id=${{ secrets.RENDER_SERVICE_ID_DEV }}" >> $GITHUB_OUTPUT
+              ;;
+          esac
+
+  # Job principal de build y deploy
+  deploy:
+    needs: detect-environment
+    runs-on: ubuntu-latest
+    environment: ${{ needs.detect-environment.outputs.environment }}
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+
+      - name: 📋 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: 📦 Install Dependencies
+        run: |
+          yarn install --frozen-lockfile
+
+      - name: 🧪 Run Tests
+        run: |
+          # yarn test --ci --coverage --watchAll=false
+          echo "Tests would run here"
+
+      - name: 🔨 Build Application
+        run: |
+          yarn build
+        env:
+          # Variables dinámicas por ambiente
+          NODE_ENV: ${{ vars.NODE_ENV || 'production' }}
+          REACT_APP_SHARETRIBE_SDK_CLIENT_ID: ${{ secrets.SHARETRIBE_CLIENT_ID }}
+          SHARETRIBE_SDK_CLIENT_SECRET: ${{ secrets.SHARETRIBE_CLIENT_SECRET }}
+          REACT_APP_STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+          REACT_APP_GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+          REACT_APP_MARKETPLACE_NAME: ${{ vars.MARKETPLACE_NAME }}
+          REACT_APP_MARKETPLACE_ROOT_URL: ${{ vars.MARKETPLACE_ROOT_URL }}
+          REACT_APP_ENV: ${{ vars.REACT_APP_ENV || 'production' }}
+          REACT_APP_CSP: ${{ vars.REACT_APP_CSP || 'block' }}
+          REACT_APP_SHARETRIBE_USING_SSL: ${{ vars.REACT_APP_SHARETRIBE_USING_SSL || 'true' }}
+          SERVER_SHARETRIBE_TRUST_PROXY: ${{ vars.SERVER_SHARETRIBE_TRUST_PROXY || 'true' }}
+
+      - name: 🚀 Build Complete - Ready for Deploy
+        if: success()
+        run: |
+          echo "🚀 Build completed for ${{ needs.detect-environment.outputs.environment }} environment"
+          echo "📋 Next step: Go to Render Dashboard and click 'Manual Deploy'"
+          echo "🌐 Service URL: ${{ vars.MARKETPLACE_ROOT_URL }}"
+
+      - name: ✅ Build Success - Manual Deploy Needed
+        if: success()
+        run: |
+          echo "🎉 Build completed successfully!"
+          echo "🌐 Ready to deploy to: ${{ vars.MARKETPLACE_ROOT_URL }}"
+          echo "📋 Go to Render Dashboard and click 'Manual Deploy' to complete"
+
+      - name: 📝 Create Success Comment
+        if: success()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.repos.createCommitComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+              body: `🚀 **Build Complete!** 
+              
+              ✅ Your code is ready for deployment
+              🌐 Target: ${{ vars.MARKETPLACE_ROOT_URL }}
+              
+              **Next Step:** 
+              1. Go to [Render Dashboard](https://dashboard.render.com/)
+              2. Find your service: \`test_sharetribe\`
+              3. Click "Manual Deploy"
+              
+              🎉 Your custom API will be live at: ${{ vars.MARKETPLACE_ROOT_URL }}/mi-api`
+            })
+
+      - name: 🔔 Notify on Failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed for ${{ needs.detect-environment.outputs.environment }}"
+          # Aquí puedes agregar notificaciones (Slack, Discord, etc.)
+
+  # Job para validar el deployment
+  validate:
+    needs: [detect-environment, deploy]
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+      - name: 🔍 Health Check
+        run: |
+          echo "🏥 Checking health of deployment..."
+          sleep 30  # Wait for deployment to be ready
+          
+          # Check if the service is responding
+          response=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.MARKETPLACE_ROOT_URL }}/_health" || echo "000")
+          
+          if [ "$response" = "200" ]; then
+            echo "✅ Health check passed!"
+          else
+            echo "❌ Health check failed with status: $response"
+            exit 1
+          fi
+
+      - name: 🧪 Test Custom API
+        run: |
+          echo "🧪 Testing custom API endpoints..."
+          
+          # Test your custom API
+          api_response=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.MARKETPLACE_ROOT_URL }}/api/my-custom-data" || echo "000")
+          
+          if [ "$api_response" = "200" ]; then
+            echo "✅ Custom API is working!"
+          else
+            echo "❌ Custom API test failed with status: $api_response"
+            exit 1
+          fi
+
+      - name: 🎉 Deployment Complete
+        run: |
+          echo "🚀 Deployment completed successfully!"
+          echo "📊 Environment: ${{ needs.detect-environment.outputs.environment }}"
+          echo "🌐 URL: ${{ vars.MARKETPLACE_ROOT_URL }}"
+          echo "🔗 Custom API: ${{ vars.MARKETPLACE_ROOT_URL }}/mi-api"

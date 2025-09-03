@@ -1,0 +1,145 @@
+name: 📦 Release Management
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Type of version bump'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      release_notes:
+        description: 'Release notes'
+        required: false
+        default: 'Automated release'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 📋 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'yarn'
+
+      - name: 📦 Install Dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: 🏷️ Generate Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual release - bump version
+            current_version=$(node -p "require('./package.json').version")
+            echo "Current version: $current_version"
+            
+            # Bump version based on input
+            npm version ${{ github.event.inputs.version_type }} --no-git-tag-version
+            new_version=$(node -p "require('./package.json').version")
+            
+            echo "version=$new_version" >> $GITHUB_OUTPUT
+            echo "tag=v$new_version" >> $GITHUB_OUTPUT
+          else
+            # Tag-triggered release
+            tag=${GITHUB_REF#refs/tags/}
+            version=${tag#v}
+            echo "version=$version" >> $GITHUB_OUTPUT
+            echo "tag=$tag" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 📝 Generate Changelog
+        id: changelog
+        run: |
+          echo "📋 Generating changelog..."
+          
+          # Get commits since last tag
+          last_tag=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          
+          if [ -n "$last_tag" ]; then
+            echo "changelog<<EOF" >> $GITHUB_OUTPUT
+            echo "## 🚀 What's New in ${{ steps.version.outputs.tag }}" >> $GITHUB_OUTPUT
+            echo "" >> $GITHUB_OUTPUT
+            
+            # Group commits by type
+            echo "### ✨ Features" >> $GITHUB_OUTPUT
+            git log $last_tag..HEAD --oneline --grep="feat:" --grep="feature:" | sed 's/^/- /' >> $GITHUB_OUTPUT || true
+            echo "" >> $GITHUB_OUTPUT
+            
+            echo "### 🐛 Bug Fixes" >> $GITHUB_OUTPUT
+            git log $last_tag..HEAD --oneline --grep="fix:" --grep="bug:" | sed 's/^/- /' >> $GITHUB_OUTPUT || true
+            echo "" >> $GITHUB_OUTPUT
+            
+            echo "### 🔧 Improvements" >> $GITHUB_OUTPUT
+            git log $last_tag..HEAD --oneline --grep="chore:" --grep="refactor:" --grep="perf:" | sed 's/^/- /' >> $GITHUB_OUTPUT || true
+            echo "" >> $GITHUB_OUTPUT
+            
+            echo "### 📚 Documentation" >> $GITHUB_OUTPUT
+            git log $last_tag..HEAD --oneline --grep="docs:" | sed 's/^/- /' >> $GITHUB_OUTPUT || true
+            echo "" >> $GITHUB_OUTPUT
+            
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "changelog=## 🚀 Initial Release" >> $GITHUB_OUTPUT
+          fi
+
+      - name: 🏷️ Create Git Tag
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Commit version bump
+          git add package.json
+          git commit -m "🔖 Bump version to ${{ steps.version.outputs.version }}"
+          
+          # Create and push tag
+          git tag ${{ steps.version.outputs.tag }}
+          git push origin main
+          git push origin ${{ steps.version.outputs.tag }}
+
+      - name: 📦 Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          release_name: "🚀 Release ${{ steps.version.outputs.tag }}"
+          body: |
+            ${{ steps.changelog.outputs.changelog }}
+            
+            ---
+            
+            ### 🚀 Deployment
+            This release will be automatically deployed to:
+            - 🔗 **Production**: https://test-sharetribe-0mz5.onrender.com
+            - 🔗 **Custom API**: https://test-sharetribe-0mz5.onrender.com/mi-api
+            
+            ### 📋 API Endpoints
+            - `GET /api/my-custom-data` - List all items
+            - `POST /api/my-custom-data` - Create new item
+            - `PUT /api/my-custom-data/:id` - Update item
+            - `DELETE /api/my-custom-data/:id` - Delete item
+            - `GET /api/external-data` - External API data
+            
+            ${{ github.event.inputs.release_notes || '' }}
+          draft: false
+          prerelease: false
+
+      - name: 🚀 Trigger Production Deploy
+        run: |
+          echo "🚀 Triggering production deployment..."
+          # The deploy workflow will be triggered by the tag push

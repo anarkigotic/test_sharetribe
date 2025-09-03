@@ -1,0 +1,35 @@
+# Configuración para Producción
+services:
+  - type: web
+    name: sharetribe-production
+    env: node
+    plan: starter # Usar plan pagado para producción
+    buildCommand: yarn install --frozen-lockfile && yarn build
+    startCommand: yarn start
+    healthCheckPath: /_health
+    
+    # Auto-deploy desde main branch
+    autoDeploy: true
+    branch: main
+    
+    # Variables de entorno de producción
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: REACT_APP_ENV
+        value: production
+      - key: REACT_APP_CSP
+        value: block
+      - key: REACT_APP_SHARETRIBE_USING_SSL
+        value: "true"
+      - key: SERVER_SHARETRIBE_TRUST_PROXY
+        value: "true"
+      - key: REACT_APP_MARKETPLACE_NAME
+        value: Mi Marketplace
+      
+      # Estas se configurarán via GitHub Actions
+      # - REACT_APP_SHARETRIBE_SDK_CLIENT_ID
+      # - SHARETRIBE_SDK_CLIENT_SECRET
+      # - REACT_APP_STRIPE_PUBLISHABLE_KEY
+      # - REACT_APP_MAPBOX_ACCESS_TOKEN
+      # - REACT_APP_MARKETPLACE_ROOT_URL
