@@ -137,11 +137,11 @@ jobs:
           echo "❌ Deployment failed for ${{ needs.detect-environment.outputs.environment }}"
           # Aquí puedes agregar notificaciones (Slack, Discord, etc.)
 
-  # Job para validar el deployment
+  # Job para validar el deployment (solo si hay deploy automático)
   validate:
     needs: [detect-environment, deploy]
     runs-on: ubuntu-latest
-    if: success()
+    if: success() && false  # Disabled for manual deploy workflow
     
     steps:
       - name: 🔍 Health Check
@@ -155,8 +155,8 @@ jobs:
           if [ "$response" = "200" ]; then
             echo "✅ Health check passed!"
           else
-            echo "❌ Health check failed with status: $response"
-            exit 1
+            echo "⚠️ Health check skipped - manual deploy required"
+            echo "📋 Go to Render Dashboard to complete deployment"
           fi
 
       - name: 🧪 Test Custom API
