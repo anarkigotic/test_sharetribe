@@ -21,9 +21,21 @@ const createUserWithIdp = require('./api/auth/createUserWithIdp');
 const { authenticateFacebook, authenticateFacebookCallback } = require('./api/auth/facebook');
 const { authenticateGoogle, authenticateGoogleCallback } = require('./api/auth/google');
 
+// Importar mi API personalizada
+const { 
+  getCustomData, 
+  createCustomData, 
+  updateCustomData, 
+  deleteCustomData, 
+  getExternalData 
+} = require('./api/my-custom-api');
+
 const router = express.Router();
 
 // ================ API router middleware: ================ //
+
+// Parse JSON bodies for regular API calls
+router.use(bodyParser.json());
 
 // Parse Transit body first to a string
 router.use(
@@ -79,5 +91,16 @@ router.get('/auth/google', authenticateGoogle);
 // with Google. In this route a Passport.js custom callback is used for calling
 // loginWithIdp endpoint in Sharetribe Auth API to authenticate user to the marketplace
 router.get('/auth/google/callback', authenticateGoogleCallback);
+
+// ================ MIS APIs PERSONALIZADAS ================ //
+
+// CRUD endpoints para mis datos personalizados
+router.get('/my-custom-data', getCustomData);          // GET /api/my-custom-data
+router.post('/my-custom-data', createCustomData);      // POST /api/my-custom-data
+router.put('/my-custom-data/:id', updateCustomData);   // PUT /api/my-custom-data/1
+router.delete('/my-custom-data/:id', deleteCustomData); // DELETE /api/my-custom-data/1
+
+// Endpoint para datos externos
+router.get('/external-data', getExternalData);         // GET /api/external-data
 
 module.exports = router;

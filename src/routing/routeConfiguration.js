@@ -40,6 +40,9 @@ const NoAccessPage = loadable(() => import(/* webpackChunkName: "NoAccessPage" *
 // Styleguide helps you to review current components and develop new ones
 const StyleguidePage = loadable(() => import(/* webpackChunkName: "StyleguidePage" */ '../containers/StyleguidePage/StyleguidePage'));
 
+// Mi página personalizada con API propia
+const MyCustomPage = loadable(() => import(/* webpackChunkName: "MyCustomPage" */ '../containers/MyCustomPage/MyCustomPage'));
+
 export const ACCOUNT_SETTINGS_PAGES = [
   'ContactDetailsPage',
   'PasswordChangePage',
@@ -401,6 +404,12 @@ const routeConfiguration = (layoutConfig, accessControlConfig) => {
       authPage: 'LoginPage',
       component: EmailVerificationPage,
       loadData: pageDataLoadingAPI.EmailVerificationPage.loadData,
+    },
+    // Mi página personalizada con API propia
+    {
+      path: '/mi-api',
+      name: 'MyCustomPage',
+      component: MyCustomPage,
     },
     // Do not change this path!
     //
